@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # shellcheck disable=SC1090
 
 ##
@@ -114,27 +114,33 @@ vultrToolsGetDCTokyo() {
   vultrRegionsList | jq '.[] | select( .name == "Tokyo" )'
 }
 
-vultrMain() {
+vultrMain() {  ## main start DO NOT REMOVE ##
   subCommand="$1"
   subSubCommand="$2"
 
   if [ "$2" ]; then shift || true; fi
   if [ "$1" ]; then shift || true; fi
 
+  # shellcheck disable=SC2034
+  vultrMainContent=$(
+    vultrMainTail=$(tail -n +"$(grep -n "## main start DO NOT REMOVE ##$" "$0" | cut -d: -f1)" "$0")
+    echo "${vultrMainTail}" | head -n +"$(echo "${vultrMainTail}" | grep -n "## main end DO NOT REMOVE ##$" | cut -d: -f1)"
+  )
+
   # shellcheck disable=1004,SC2016
   getSubCmds='''
-    declare -f vultrMain \
-      | grep -Eo "^ {8}[^ ]+ *)" \
-      | grep -Ev "^ {8}(subcmds|\*)" \
+    echo "${vultrMainContent}" \
+      | grep -Eo "^ {4}[^ ]+ *)" \
+      | grep -Ev "^ {4}(subcmds|\*)" \
       | tr -d "\n" \
       | sed "s/ *//g; s/)/ /g"
   '''
 
   # shellcheck disable=1004,SC2016
   getSubSubCmds='''
-    declare -f vultrMain \
-      | grep -Eo "^( {8}| {16})[^ ]+ *)" \
-      | grep -Ev "^ {8}(subcmds|\*)" \
+    echo "${vultrMainContent}" \
+      | grep -Eo "^( {4}| {8})[^ ]+ *)" \
+      | grep -Ev "^ {4}(subcmds|\*)" \
       | tr -d "\n" \
       | sed "s/.* \(${subCommand} *)[^\*]*\).*/\1/g; s/^${subCommand} *)//g; s/subcmds *)//g; s/ *//g; s/)/ /g"
   '''
@@ -142,6 +148,11 @@ vultrMain() {
   case "${subCommand}" in
     subcmds)
       eval "${getSubCmds}" ;;
+    completion)
+      case "${subSubCommand}" in
+        subcmds) true ;;
+        *      ) echo ". $(cd "$(dirname "$0")"; pwd)/$(basename "$0")" ;;
+      esac ;;
     configure)
       case "${subSubCommand}" in
         subcmds) true ;;
@@ -183,7 +194,7 @@ vultrMain() {
     *)
       vultrPrintStderr "allowed value: $(bash "$0" subcmds)"; return 1 ;;
   esac
-} && vultrMain "$@"
+} && vultrMain "$@"  ## main end DO NOT REMOVE ##
 
 # -- Non Interactive ----------------
 else
@@ -209,7 +220,7 @@ __complete_vultr() {
   fi
 }
 # shellcheck disable=SC2039
-[ -z "$(command -v complete)" ] || complete -F __complete_vultr vultr
+{ ! command -v complete 1>/dev/null; } || complete -F __complete_vultr vultr
 
 # -- Interactive ----------------
 fi

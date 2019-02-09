@@ -18,7 +18,7 @@ $ sudo mv /tmp/vultr /usr/local/bin/vultr
 ### Tab completion
 
 ```console
-$ . /usr/local/bin/vultr
+$ eval "$(vultr completion)"
 
 $ vultr  # <tab>
 configure      account        os             plans          regions        server         startupscript
