@@ -185,11 +185,12 @@ vultrMain() {  ## main start DO NOT REMOVE ##
       esac ;;
     tools)
       case "${subSubCommand}" in
-        subcmds          ) eval "${getSubSubCmds}" ;;
-        get-os-ubuntu1804) vultrToolsGetOSUbuntu1804 "$@" ;;
-        get-plan-ram1024 ) vultrToolsGetPlanRAM1024 "$@" ;;
-        get-dc-tokyo     ) vultrToolsGetDCTokyo "$@" ;;
-        *                ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
+        subcmds                               ) eval "${getSubSubCmds}" ;;
+        get-os-ubuntu1804                     ) vultrToolsGetOSUbuntu1804 "$@" ;;
+        get-plan-ram1024                      ) vultrToolsGetPlanRAM1024 "$@" ;;
+        get-dc-tokyo                          ) vultrToolsGetDCTokyo "$@" ;;
+        server-create-tokyo-ram1024-ubuntu1804) vultrServerCreate 25 201 270 ;;
+        *                                     ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
       esac ;;
     *)
       vultrPrintStderr "allowed value: $(bash "$0" subcmds)"; return 1 ;;
