@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# shellcheck disable=SC1090
+
+##
+# If in non interactive shell ( "$-" not containing "i" ),
+# execute script as command.
+##
+if ! { echo "$-" | grep -q i; }; then
+# -- Non Interactive ----------------
+
+# If an error occurs, EXIT abnormally.
+set -e
+
+checkDependency() { (
+  for cmd in "$@"; do
+    if ! command -v -- "${cmd}" >/dev/null; then
+      echo "\"${cmd}\" not found in \$PATH" 1>&2
+      exit 1
+    fi
+  done
+)}
+checkDependency curl jq
+
+VultrCredentialsFile="$HOME/.vultr/credentials"
+
+vultrConfigure() {
+  if [ -e "${VultrCredentialsFile}" ]; then
+    echo "already exist: ${VultrCredentialsFile}"
+    exit 1
+  fi
+  mkdir -p "$(dirname "${VultrCredentialsFile}")"
+  echo "ref. https://my.vultr.com/settings/#settingsapi"
+  stty -echo
+  printf '%s' 'Vultr API key: '
+  read -r VultrAPIKey
+  stty echo
+  echo
+  if [ -z "${VultrAPIKey}" ]; then
+    echo "Vultr API key not set"
+    exit 1
+  fi
+  echo "VultrAPIKey=${VultrAPIKey}" | tee "${VultrCredentialsFile}" 1>/dev/null
+  chown -R "$(id -u)":"$(id -g)" "$(dirname "${VultrCredentialsFile}")"
+  chmod -R go-rwx "$(dirname "${VultrCredentialsFile}")"
+}
+
+vultrSetCredentials() {
+  if [ -f "${VultrCredentialsFile}" ] && [ -r "${VultrCredentialsFile}" ]; then
+    . "${VultrCredentialsFile}"
+  else
+    echo "Credentials file does not found: ${VultrCredentialsFile}"
+    echo "For set credentials, run:"
+    echo "  $ vultr configure"
+    exit 1
+  fi
+}
+
+vultrRegionsList() {
+  vultrSetCredentials
+  curl -sS -X GET "https://api.vultr.com/v1/regions/list" \
+    -H "API-Key: ${VultrAPIKey}" \
+    | jq .
+}
+
+vultrServerList() {
+  vultrSetCredentials
+  curl -sS -X GET "https://api.vultr.com/v1/server/list" \
+    -H "API-Key: ${VultrAPIKey}" \
+    | jq .
+}
+
+vultrServerCreate() {
+  vultrServerDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
+  vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
+  vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
+  vultrSetCredentials
+  curl -sS -X POST "https://api.vultr.com/v1/server/create" \
+    -H "API-Key: ${VultrAPIKey}" \
+    -d "DCID=${vultrServerDCID}" \
+    -d "DCID=${vultrServerVPSPLANID}" \
+    -d "DCID=${vultrServerOSID}" \
+    | jq .
+}
+
+vultrGetTokyoDC() {
+  vultrRegionsList | jq '.[] | select( .name == "Tokyo" )'
+}
+
+vultrMain() {
+  subCommand="$1"
+  subSubCommand="$2"
+
+  if [ "$2" ]; then shift || true; fi
+  if [ "$1" ]; then shift || true; fi
+
+  # shellcheck disable=1004,SC2016
+  getSubCmds='''
+    declare -f vultrMain \
+      | grep -Eo "^ {8}[^ ]+ *)" \
+      | grep -Ev "^ {8}(subcmds|\*)" \
+      | tr -d "\n" \
+      | sed "s/ *//g; s/)/ /g"
+  '''
+
+  # shellcheck disable=1004,SC2016
+  getSubSubCmds='''
+    declare -f vultrMain \
+      | grep -Eo "^( {8}| {16})[^ ]+ *)" \
+      | grep -Ev "^ {8}(subcmds|\*)" \
+      | tr -d "\n" \
+      | sed "s/.* \(${subCommand} *)[^\*]*\).*/\1/g; s/^${subCommand} *)//g; s/subcmds *)//g; s/ *//g; s/)/ /g"
+  '''
+
+  case "${subCommand}" in
+    subcmds)
+      eval "${getSubCmds}" ;;
+    configure)
+      case "${subSubCommand}" in
+        subcmds) true ;;
+        *      ) vultrConfigure ;;
+      esac ;;
+    regions)
+      case "${subSubCommand}" in
+        subcmds) eval "${getSubSubCmds}" ;;
+        list   ) vultrRegionsList "$@" ;;
+        *      ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
+    server)
+      case "${subSubCommand}" in
+        subcmds    ) eval "${getSubSubCmds}" ;;
+        create     ) vultrServerCreate "$@" ;;
+        list       ) vultrServerList "$@" ;;
+        *          ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
+    tools)
+      case "${subSubCommand}" in
+        subcmds     ) eval "${getSubSubCmds}" ;;
+        get-tokyo-dc) vultrGetTokyoDC ;;
+        *           ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
+      esac ;;
+    *)
+      echo "allowed value: $(bash "$0" subcmds)"; return 1 ;;
+  esac
+} && vultrMain "$@"
+
+# -- Non Interactive ----------------
+else
+# -- Interactive ----------------
+
+
+##
+# vultr command as bash-completion
+#
+# The following function is for bash-completion.
+# When executing script as a command,
+# the following function is not defined nor executed.
+#
+# shellcheck disable=SC2016,SC2034,SC2039
+##
+__complete_vultr() {
+  local cur prev cword
+  _get_comp_words_by_ref -n : cur prev cword
+  if [ "${cword}" -eq 1 ]; then
+    eval 'COMPREPLY=( $(compgen -W "'"$(vultr subcmds)"'" -- "${cur}") )'
+  elif [ "${cword}" -eq 2 ]; then
+    eval 'COMPREPLY=( $(compgen -W "'"$(vultr "${prev}" subcmds)"'" -- "${cur}") )'
+  fi
+}
+# shellcheck disable=SC2039
+[ -z "$(command -v complete)" ] || complete -F __complete_vultr vultr
+
+# -- Interactive ----------------
+fi
