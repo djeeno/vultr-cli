@@ -11,6 +11,10 @@ if ! { echo "$-" | grep -q i; }; then
 # If an error occurs, EXIT abnormally.
 set -e -o pipefail
 
+# Global variables
+VULTR_VERSION='0.0.1'
+VULTR_PROGRAM_NAME="$(basename -- "$0")"
+
 vultrPrintStderr() {
   echo "$*" 1>&2
 }
@@ -32,7 +36,7 @@ vultrConfigure() {
     vultrPrintStderr "already exist: ${VultrCredentialsFile}"
     exit 1
   fi
-  mkdir -p "$(dirname "${VultrCredentialsFile}")"
+  mkdir -p "$(dirname -- "${VultrCredentialsFile}")"
   echo "ref. https://my.vultr.com/settings/#settingsapi"
   stty -echo
   printf '%s' 'Vultr API key: '
@@ -44,8 +48,8 @@ vultrConfigure() {
     exit 1
   fi
   echo "VultrAPIKey=${VultrAPIKey}" | tee "${VultrCredentialsFile}" 1>/dev/null
-  chown -R "$(id -u)":"$(id -g)" "$(dirname "${VultrCredentialsFile}")"
-  chmod -R go-rwx "$(dirname "${VultrCredentialsFile}")"
+  chown -R "$(id -u)":"$(id -g)" "$(dirname -- "${VultrCredentialsFile}")"
+  chmod -R go-rwx "$(dirname -- "${VultrCredentialsFile}")"
 }
 
 vultrSetCredentials() {
@@ -151,7 +155,7 @@ vultrMain() {  ## main start DO NOT REMOVE ##
     completion)
       case "${subSubCommand}" in
         subcmds) true ;;
-        *      ) echo ". $(cd "$(dirname "$0")"; pwd)/$(basename "$0")" ;;
+        *      ) echo ". $(cd "$(dirname "$0")"; pwd)/$(basename -- "$0")" ;;
       esac ;;
     configure)
       case "${subSubCommand}" in
@@ -191,6 +195,11 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         get-dc-tokyo                          ) vultrToolsGetDCTokyo "$@" ;;
         server-create-tokyo-ram1024-ubuntu1804) vultrServerCreate 25 201 270 ;;
         *                                     ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
+      esac ;;
+    version)
+      case "${subSubCommand}" in
+        subcmds) true ;;
+        *      ) echo "${VULTR_PROGRAM_NAME} ${VULTR_VERSION}" ;;
       esac ;;
     *)
       vultrPrintStderr "allowed value: $(bash "$0" subcmds)"; return 1 ;;

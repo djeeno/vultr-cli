@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e -o pipefail
+
+#PROTECTED_BRANCH="master|develop"
+PROTECTED_BRANCH="master"
+
+# If on the branch:
+if git branch -a | tee /dev/stderr | grep -Eq '^\*[[:blank:]]('"${PROTECTED_BRANCH}"')'; then
+  echo "[ERROR] You can not commit on the \"${PROTECTED_BRANCH}\" branch." 1>&2
+  exit 1
+fi
+
+# run test
+make test
