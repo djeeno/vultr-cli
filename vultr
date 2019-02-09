@@ -9,12 +9,16 @@ if ! { echo "$-" | grep -q i; }; then
 # -- Non Interactive ----------------
 
 # If an error occurs, EXIT abnormally.
-set -e
+set -e -o pipefail
+
+vultrPrintStderr() {
+  echo "$*" 1>&2
+}
 
 checkDependency() { (
   for cmd in "$@"; do
     if ! command -v -- "${cmd}" >/dev/null; then
-      echo "\"${cmd}\" not found in \$PATH" 1>&2
+      vultrPrintStderr "\"${cmd}\" not found in \$PATH"
       exit 1
     fi
   done
@@ -25,7 +29,7 @@ VultrCredentialsFile="$HOME/.vultr/credentials"
 
 vultrConfigure() {
   if [ -e "${VultrCredentialsFile}" ]; then
-    echo "already exist: ${VultrCredentialsFile}"
+    vultrPrintStderr "already exist: ${VultrCredentialsFile}"
     exit 1
   fi
   mkdir -p "$(dirname "${VultrCredentialsFile}")"
@@ -36,7 +40,7 @@ vultrConfigure() {
   stty echo
   echo
   if [ -z "${VultrAPIKey}" ]; then
-    echo "Vultr API key not set"
+    vultrPrintStderr "Vultr API key not set"
     exit 1
   fi
   echo "VultrAPIKey=${VultrAPIKey}" | tee "${VultrCredentialsFile}" 1>/dev/null
@@ -48,41 +52,65 @@ vultrSetCredentials() {
   if [ -f "${VultrCredentialsFile}" ] && [ -r "${VultrCredentialsFile}" ]; then
     . "${VultrCredentialsFile}"
   else
-    echo "Credentials file does not found: ${VultrCredentialsFile}"
-    echo "For set credentials, run:"
-    echo "  $ vultr configure"
+    vultrPrintStderr "Credentials file does not found: ${VultrCredentialsFile}"
+    vultrPrintStderr "For set credentials, run:"
+    vultrPrintStderr "  $ vultr configure"
     exit 1
   fi
 }
 
-vultrRegionsList() {
+vultrOSList() {
+  # ref. https://www.vultr.com/api/#os_os_list
   vultrSetCredentials
-  curl -sS -X GET "https://api.vultr.com/v1/regions/list" \
-    -H "API-Key: ${VultrAPIKey}" \
-    | jq .
+  response=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/os/list")
+  echo "${response}" | jq . 2>/dev/null || vultrPrintStderr "${response}"
+}
+
+vultrPlansList() {
+  # ref. https://www.vultr.com/api/#plans_plan_list
+  vultrSetCredentials
+  response=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/plans/list")
+  echo "${response}" | jq . 2>/dev/null || vultrPrintStderr "${response}"
+}
+
+vultrRegionsList() {
+  # ref. https://www.vultr.com/api/#regions_region_list
+  vultrSetCredentials
+  response=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/regions/list")
+  echo "${response}" | jq . 2>/dev/null || vultrPrintStderr "${response}"
 }
 
 vultrServerList() {
+  # ref. https://www.vultr.com/api/#server_server_list
   vultrSetCredentials
-  curl -sS -X GET "https://api.vultr.com/v1/server/list" \
-    -H "API-Key: ${VultrAPIKey}" \
-    | jq .
+  response=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/server/list")
+  echo "${response}" | jq . 2>/dev/null || vultrPrintStderr "${response}"
 }
 
 vultrServerCreate() {
+  # ref. https://www.vultr.com/api/#server_create
   vultrServerDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
   vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
   vultrSetCredentials
-  curl -sS -X POST "https://api.vultr.com/v1/server/create" \
-    -H "API-Key: ${VultrAPIKey}" \
-    -d "DCID=${vultrServerDCID}" \
-    -d "DCID=${vultrServerVPSPLANID}" \
-    -d "DCID=${vultrServerOSID}" \
-    | jq .
+  response=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/create" \
+      -d "DCID=${vultrServerDCID}" \
+      -d "VPSPLANID=${vultrServerVPSPLANID}" \
+      -d "OSID=${vultrServerOSID}"
+  )
+  echo "${response}" | jq . 2>/dev/null || vultrPrintStderr "${response}"
 }
 
-vultrGetTokyoDC() {
+vultrToolsGetOSUbuntu1804() {
+  vultrOSList | jq '.[] | select( .name == "Ubuntu 18.04 x64" )'
+}
+
+vultrToolsGetPlanRAM1024() {
+  vultrPlansList | jq '.[] | select( .ram == "1024" )'
+}
+
+vultrToolsGetDCTokyo() {
   vultrRegionsList | jq '.[] | select( .name == "Tokyo" )'
 }
 
@@ -119,27 +147,41 @@ vultrMain() {
         subcmds) true ;;
         *      ) vultrConfigure ;;
       esac ;;
+    os)
+      case "${subSubCommand}" in
+        subcmds) eval "${getSubSubCmds}" ;;
+        list   ) vultrOSList "$@" ;;
+        *      ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
+    plans)
+      case "${subSubCommand}" in
+        subcmds) eval "${getSubSubCmds}" ;;
+        list   ) vultrPlansList "$@" ;;
+        *      ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
     regions)
       case "${subSubCommand}" in
         subcmds) eval "${getSubSubCmds}" ;;
         list   ) vultrRegionsList "$@" ;;
-        *      ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+        *      ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;
     server)
       case "${subSubCommand}" in
         subcmds    ) eval "${getSubSubCmds}" ;;
         create     ) vultrServerCreate "$@" ;;
         list       ) vultrServerList "$@" ;;
-        *          ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+        *          ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;
     tools)
       case "${subSubCommand}" in
-        subcmds     ) eval "${getSubSubCmds}" ;;
-        get-tokyo-dc) vultrGetTokyoDC ;;
-        *           ) echo "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
+        subcmds          ) eval "${getSubSubCmds}" ;;
+        get-os-ubuntu1804) vultrToolsGetOSUbuntu1804 "$@" ;;
+        get-plan-ram1024 ) vultrToolsGetPlanRAM1024 "$@" ;;
+        get-dc-tokyo     ) vultrToolsGetDCTokyo "$@" ;;
+        *                ) vultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
       esac ;;
     *)
-      echo "allowed value: $(bash "$0" subcmds)"; return 1 ;;
+      vultrPrintStderr "allowed value: $(bash "$0" subcmds)"; return 1 ;;
   esac
 } && vultrMain "$@"
 
