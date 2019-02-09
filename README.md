@@ -1,6 +1,6 @@
 # vultr-cli
 
-[Vultr](https://www.vultr.com/?ref=7845607-4F) CLI written in shell script.
+[Vultr](https://www.vultr.com/?ref=7845607-4F) Command Line Interface written in shell script.
 
 ### Dependencies
 
@@ -21,7 +21,7 @@ $ sudo mv /tmp/vultr /usr/local/bin/vultr
 $ eval "$(vultr completion)"
 
 $ vultr  # <tab>
-configure      account        os             plans          regions        server         startupscript
+completion  configure   os          plans       regions     server      tools       version
 ```
 
 ### Set Credentials
