@@ -6,7 +6,7 @@ git pull
 RELEASE_BRANCH_NAME="master"
 CURRENT_BRANCH_NAME=$(git branch | grep "^\*" | sed s/^[^[:blank:]][[:blank:]]//)
 TAG_LATEST_VERSION=$(git tag | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | sort -V | tail -1)
-VERSION=$("$(pwd)/$(git rev-parse --show-cdup)/vultr" version | sed s/[^[:blank:]]*[[:blank:]]*//)
+VERSION=$("$(echo "$(pwd)/$(git rev-parse --show-cdup)" | sed 's@/$@@')/vultr" version | sed s/[^[:blank:]]*[[:blank:]]*//)
 
 printf "\e[1;32m%s\e[0m\n" "$(LANG=C date) [INFO]  -- release ${VERSION} ----------------"
 if [ "${VERSION}" = "${TAG_LATEST_VERSION}" ]; then

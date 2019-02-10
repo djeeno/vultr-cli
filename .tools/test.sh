@@ -2,7 +2,7 @@
 
 set -e -o pipefail
 
-DIRECTORY="$(pwd)/$(git rev-parse --show-cdup)"
+DIRECTORY="$(echo "$(pwd)/$(git rev-parse --show-cdup)" | sed 's@/$@@')"
 
 "${DIRECTORY}/vultr" version
 set -x

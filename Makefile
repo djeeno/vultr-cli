@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-GIT_ROOT_DIR := $(shell echo "`pwd`/`git rev-parse --show-cdup`")
+GIT_ROOT_DIR := $(shell echo "`pwd`/`git rev-parse --show-cdup`" | sed 's@/$$@@')
 
 .PHONY: help init release release-force test
 
@@ -12,7 +12,7 @@ help:  ## Print docs
 test:  ## Run test script
 	@time ./.tools/test.sh
 
-merge:  ## Merge and push all branchs
+merge:  ## Merge and push
 	CurrentBrunch=`git branch | grep ^* | sed s/^[^[:blank:]][[:blank:]]//` && \
 		git push && \
 		git checkout develop && \
@@ -23,7 +23,7 @@ merge:  ## Merge and push all branchs
 		git push && \
 		git checkout $${CurrentBrunch}
 
-release: test  ## Add and push release tag
+release: test  ## Add tag and push tag for release
 	@./.tools/release.sh
 
 release-force: test  ## Force push release tag 
