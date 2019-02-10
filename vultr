@@ -246,7 +246,8 @@ VultrServerCreateWithOptional() {
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
   vultrServerEnablePrivateNetwork="${4:?"$(printf '\n%s' "Set \$4: enable_private_network string (optional) 'yes' or 'no'. If yes, private networking support will be added to the new server.")"}"
   vultrServerBase64EncodedUserData="${5:?"$(printf '\n%s' "Set \$5: userdata string (optional) Base64 encoded user-data")"}"
-  vultrServerTag="${6:?"$(printf '\n%s' "Set \$6: tag string (optional) The tag to assign to this server.")"}"
+  vultrServerLabel="${6:?"$(printf '\n%s' "Set \$5: label string (optional) This is a text label that will be shown in the control panel")"}"
+  vultrServerTag="${7:?"$(printf '\n%s' "Set \$6: tag string (optional) The tag to assign to this server.")"}"
   VultrSetCredentials
   vultrAPIResponse=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/create" \
@@ -255,6 +256,7 @@ VultrServerCreateWithOptional() {
       -d "OSID=${vultrServerOSID}" \
       -d "enable_private_network=${vultrServerEnablePrivateNetwork}" \
       -d "userdata=${vultrServerBase64EncodedUserData}" \
+      -d "label=${vultrServerLabel}" \
       -d "tag=${vultrServerTag}"
   )
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
@@ -358,11 +360,16 @@ VultrToolsGetPlanRAM1024() { CheckDependency jq; VultrPlansList | jq '.[] | sele
 VultrToolsGetDCTokyo() { CheckDependency jq; VultrRegionsList | jq '.[] | select( .name == "Tokyo" )'; }
 
 VultrToolsServerCreateTokyoRAM1024Ubuntu1804() {
-  VultrServerCreateWithOptional 25 201 270 yes
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK tmp "$(TZ=UTC date +%Y%m%dT%H%M%SZ)"
 }
 
 VultrToolsServerCreateK8sCluster() {
-  VultrServerCreateWithOptional 25 201 270 yes
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01master01
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01master02
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01master03
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01node01
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01node02
+  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK kubernetes k8s01node03
 }
 
 
@@ -485,7 +492,7 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         get-plan-ram1024                      ) VultrToolsGetPlanRAM1024 "$@" ;;
         get-dc-tokyo                          ) VultrToolsGetDCTokyo "$@" ;;
         server-create-tokyo-ram1024-ubuntu1804) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
-        server-create-k8s-cluster             ) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
+        server-create-k8s-cluster             ) VultrToolsServerCreateK8sCluster "$@" ;;
         *                                     ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
       esac ;;
     version)
