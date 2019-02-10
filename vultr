@@ -245,13 +245,29 @@ VultrServerCreateWithOptional() {
   vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
   vultrServerEnablePrivateNetwork="${4:?"$(printf '\n%s' "Set \$4: enable_private_network string (optional) 'yes' or 'no'. If yes, private networking support will be added to the new server.")"}"
+  vultrServerBase64EncodedUserData="${5:?"$(printf '\n%s' "Set \$5: userdata string (optional) Base64 encoded user-data")"}"
+  vultrServerTag="${6:?"$(printf '\n%s' "Set \$6: tag string (optional) The tag to assign to this server.")"}"
   VultrSetCredentials
   vultrAPIResponse=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/create" \
       -d "DCID=${vultrServerDCID}" \
       -d "VPSPLANID=${vultrServerVPSPLANID}" \
       -d "OSID=${vultrServerOSID}" \
-      -d "enable_private_network=${vultrServerEnablePrivateNetwork}"
+      -d "enable_private_network=${vultrServerEnablePrivateNetwork}" \
+      -d "userdata=${vultrServerBase64EncodedUserData}" \
+      -d "tag=${vultrServerTag}"
+  )
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+VultrServerDestroy() {
+  # ref. https://www.vultr.com/api/#server_destroy
+  CheckDependency curl
+  vultrServerSUBID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: SUBID integer Unique identifier for this subscription." "See:" "  $ vultr server list")"}"
+  VultrSetCredentials
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/destroy" \
+      -d "SUBID=${vultrServerSUBID}" \
   )
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
@@ -443,6 +459,7 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         subcmds             ) eval "${getSubSubCmds}" ;;
         create              ) VultrServerCreate "$@" ;;
         create-with-optional) VultrServerCreateWithOptional "$@" ;;
+        destroy             ) VultrServerDestroy "$@" ;;
         list                ) VultrServerList "$@" ;;
         *                   ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;

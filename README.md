@@ -35,6 +35,11 @@ Vultr API key: ************************************
 ### Run
 
 ```console
-$ vultr server list
-  ...
+$ vultr account info
+{
+  "balance": "0",
+  "pending_charges": "0",
+  "last_payment_date": "2006-01-02 15:04:05",
+  "last_payment_amount": "0"
+}
 ```
