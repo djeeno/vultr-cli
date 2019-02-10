@@ -10,7 +10,7 @@
 ### Install
 
 ```console
-$ curl -LRsS https://raw.githubusercontent.com/djeeno/vultr-cli/master/vultr -o /tmp/vultr
+$ curl -LRsS https://raw.githubusercontent.com/djeeno/vultr-cli/0.0.2/vultr -o /tmp/vultr
 $ chmod +x /tmp/vultr
 $ sudo mv /tmp/vultr /usr/local/bin/vultr
 ```
