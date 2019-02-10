@@ -11,10 +11,17 @@ if ! { echo "$-" | grep -q i; }; then
 # If an error occurs, EXIT abnormally.
 set -e -o pipefail
 
-# Global variables
+##
+# constants
+##
 VULTR_VERSION='0.0.3'
 VULTR_PROGRAM_NAME="$(basename -- "$0")"
 
+
+
+##
+# common
+##
 VultrPrintStderr() {
   echo "$*" 1>&2
 }
@@ -78,6 +85,8 @@ VultrJSON() {
   fi
 }
 
+
+
 ##
 # account
 ##
@@ -88,6 +97,8 @@ VultrAccountInfo() {
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/account/info")
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
+
+
 
 ##
 # firewall
@@ -123,6 +134,8 @@ VultrFirewallGroupList() {
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/firewall/group_list")
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
+
+
 
 ##
 # network
@@ -165,6 +178,8 @@ VultrNetworkList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+
+
 ##
 # os
 ##
@@ -175,6 +190,8 @@ VultrOSList() {
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/os/list")
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
+
+
 
 ##
 # plans
@@ -187,6 +204,8 @@ VultrPlansList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+
+
 ##
 # regions
 ##
@@ -197,6 +216,8 @@ VultrRegionsList() {
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/regions/list")
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
+
+
 
 ##
 # server
@@ -243,6 +264,63 @@ VultrServerList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+
+
+##
+# sshkey
+##
+VultrSshkeyCreate() {
+  # ref. https://www.vultr.com/api/#sshkey_create
+  CheckDependency curl
+  vultrSshkeyName="${1:?"$(printf '\n%s' "Set \$1: name string Name of the SSH key")"}"
+  vultrSshkeyPublicKey="${2:?"$(printf '\n%s' "Set \$2: ssh_key string SSH public key (in authorized_keys format)")"}"
+  VultrSetCredentials
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/sshkey/create" \
+      -d "name=${vultrSshkeyName}" \
+      -d "ssh_key=${vultrSshkeyPublicKey}"
+  )
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+VultrSshkeyDestroy() {
+  # ref. https://www.vultr.com/api/#sshkey_destroy
+  CheckDependency curl
+  vultrSshkeyID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: SSHKEYID string Unique identifier for this SSH key." "See:" "  $ vultr sshkey list")"}"
+  VultrSetCredentials
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/sshkey/destroy" \
+      -d "SSHKEYID=${vultrSshkeyID}"
+  )
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+VultrSshkeyList() {
+  # ref. https://www.vultr.com/api/#sshkey_sshkey_list
+  CheckDependency curl
+  VultrSetCredentials
+  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/sshkey/list")
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+VultrSshkeyUpdate() {
+  # ref. https://www.vultr.com/api/#sshkey_update
+  CheckDependency curl
+  vultrSshkeyID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: SSHKEYID string SSHKEYID of key to update (see /v1/sshkey/list)" "See:" "  $ vultr sshkey list")"}"
+  vultrSshkeyName="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: name string New name for the SSH key" "See:" "  $ vultr sshkey list")"}"
+  vultrSshkeyPublicKey="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: ssh_key string New SSH key contents" "See:" "  $ vultr sshkey list")"}"
+  VultrSetCredentials
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/sshkey/update" \
+      -d "SSHKEYID=${vultrSshkeyID}" \
+      -d "name=${vultrSshkeyName}" \
+      -d "ssh_key=${vultrSshkeyPublicKey}"
+  )
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+
+
 ##
 # startupscript
 ##
@@ -253,6 +331,7 @@ VultrStartupscriptList() {
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/startupscript/list")
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
+
 
 
 ##
@@ -270,6 +349,11 @@ VultrToolsServerCreateK8sCluster() {
   VultrServerCreateWithOptional 25 201 270 yes
 }
 
+
+
+##
+# main
+##
 vultrMain() {  ## main start DO NOT REMOVE ##
   subCommand="$1"
   subSubCommand="$2"
@@ -361,6 +445,15 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         create-with-optional) VultrServerCreateWithOptional "$@" ;;
         list                ) VultrServerList "$@" ;;
         *                   ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
+    sshkey)
+      case "${subSubCommand}" in
+        subcmds) eval "${getSubSubCmds}" ;;
+        create ) VultrSshkeyCreate "$@" ;;
+        destroy) VultrSshkeyDestroy "$@" ;;
+        list   ) VultrSshkeyList "$@" ;;
+        update ) VultrSshkeyUpdate "$@" ;;
+        *      ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;
     startupscript)
       case "${subSubCommand}" in
