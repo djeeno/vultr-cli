@@ -27,7 +27,6 @@ CheckDependency() { (
     fi
   done
 )}
-CheckDependency curl jq
 
 VULTR_CREDENTIALS_FILE="$HOME/.vultr/credentials"
 
@@ -63,33 +62,53 @@ VultrSetCredentials() {
   fi
 }
 
+VultrJSON() {
+  if command -v jq 1>/dev/null; then
+    "$(command -v jq)" . < /dev/stdin
+  elif command -v python 1>/dev/null; then
+    "$(command -v python)" -m json.tool < /dev/stdin
+  elif command -v ruby 1>/dev/null; then
+    "$(command -v ruby)" -r json -e 'puts JSON.pretty_generate(JSON.parse(STDIN.read))' < /dev/stdin
+  elif command -v perl 1>/dev/null; then
+    # shellcheck disable=SC2016
+    "$(command -v perl)" -MEncode -MJSON::PP -e '$json=JSON::PP->new->pretty; $obj=$json->decode(decode_utf8(join("",(<STDIN>)))); print encode_utf8($json->encode($obj))'
+  else
+    # plain output
+    cat /dev/stdin
+  fi
+}
+
 VultrAccountInfo() {
   # ref. https://www.vultr.com/api/#account_info
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/account/info")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrNetworkList() {
   # ref. https://www.vultr.com/api/#network_network_list
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/network/list")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrNetworkCreate() {
   # ref. https://www.vultr.com/api/#network_create
+  CheckDependency curl
   vultrNetworkDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location for the network." "See:" "  $ vultr regions list")"}"
   VultrSetCredentials
   vultrAPIResponse=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/network/create" \
       -d "DCID=${vultrNetworkDCID}" \
   )
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrNetworkCreateWithOptional() {
   # ref. https://www.vultr.com/api/#network_create
+  CheckDependency curl
   vultrNetworkDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location for the network." "See:" "  $ vultr regions list")"}"
   vultrNetworkDescription="${2:?"$(printf '\n%s' "Set \$2: description string Description of network.")"}"
   vultrNetworkV4Subnet="${3:?"$(printf '\n%s' "Set \$3: v4_subnet string IPv4 network to be used when attaching servers to this network.")"}"
@@ -102,39 +121,44 @@ VultrNetworkCreateWithOptional() {
       -d "v4_subnet=${vultrNetworkV4Subnet}" \
       -d "v4_subnet_mask=${vultrNetworkV4SubnetMask}"
   )
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrOSList() {
   # ref. https://www.vultr.com/api/#os_os_list
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/os/list")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrPlansList() {
   # ref. https://www.vultr.com/api/#plans_plan_list
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/plans/list")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrRegionsList() {
   # ref. https://www.vultr.com/api/#regions_region_list
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/regions/list")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrServerList() {
   # ref. https://www.vultr.com/api/#server_server_list
+  CheckDependency curl
   VultrSetCredentials
   vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/server/list")
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrServerCreate() {
   # ref. https://www.vultr.com/api/#server_create
+  CheckDependency curl
   vultrServerDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
   vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
@@ -145,11 +169,12 @@ VultrServerCreate() {
       -d "VPSPLANID=${vultrServerVPSPLANID}" \
       -d "OSID=${vultrServerOSID}"
   )
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
 VultrServerCreateWithOptional() {
   # ref. https://www.vultr.com/api/#server_create
+  CheckDependency curl
   vultrServerDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
   vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
@@ -160,12 +185,12 @@ VultrServerCreateWithOptional() {
       -d "VPSPLANID=${vultrServerVPSPLANID}" \
       -d "OSID=${vultrServerOSID}"
   )
-  echo "${vultrAPIResponse}" | jq . 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
-VultrToolsGetOSUbuntu1804() { VultrOSList | jq '.[] | select( .name == "Ubuntu 18.04 x64" )'; }
-VultrToolsGetPlanRAM1024() { VultrPlansList | jq '.[] | select( .ram == "1024" )'; }
-VultrToolsGetDCTokyo() { VultrRegionsList | jq '.[] | select( .name == "Tokyo" )'; }
+VultrToolsGetOSUbuntu1804() { CheckDependency jq; VultrOSList | jq '.[] | select( .name == "Ubuntu 18.04 x64" )'; }
+VultrToolsGetPlanRAM1024() { CheckDependency jq; VultrPlansList | jq '.[] | select( .ram == "1024" )'; }
+VultrToolsGetDCTokyo() { CheckDependency jq; VultrRegionsList | jq '.[] | select( .name == "Tokyo" )'; }
 
 vultrMain() {  ## main start DO NOT REMOVE ##
   subCommand="$1"
