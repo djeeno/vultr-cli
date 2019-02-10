@@ -21,7 +21,7 @@ $ sudo mv /tmp/vultr /usr/local/bin/vultr
 $ eval "$(vultr completion)"
 
 $ vultr  # <tab>
-completion  configure   os          plans       regions     server      tools       version
+account        configure      firewall       network        os             plans          regions        server         startupscript  tools          version
 ```
 
 ### Set Credentials

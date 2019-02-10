@@ -78,6 +78,9 @@ VultrJSON() {
   fi
 }
 
+##
+# account
+##
 VultrAccountInfo() {
   # ref. https://www.vultr.com/api/#account_info
   CheckDependency curl
@@ -86,14 +89,44 @@ VultrAccountInfo() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
-VultrNetworkList() {
-  # ref. https://www.vultr.com/api/#network_network_list
+##
+# firewall
+##
+VultrFirewallGroupCreate() {
+  # ref. https://www.vultr.com/api/#firewall_group_create
   CheckDependency curl
+  vultrFirewallGroupDescription="${1:?"$(printf '\n%s' "Set \$1: description string (optional) Description of firewall group.")"}"
   VultrSetCredentials
-  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/network/list")
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/firewall/group_create" \
+      -d "description=${vultrFirewallGroupDescription}" \
+  )
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+VultrFirewallGroupDelete() {
+  # ref. https://www.vultr.com/api/#firewall_group_delete
+  CheckDependency curl
+  vultrFirewallGroupID="${1:?"$(printf '\n%s' "Set \$1: FIREWALLGROUPID string Firewall group to delete." "See:" "  $ vultr firewall group-list")"}"
+  VultrSetCredentials
+  vultrAPIResponse=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/firewall/group_delete" \
+      -d "FIREWALLGROUPID=${vultrFirewallGroupID}" \
+  )
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+VultrFirewallGroupList() {
+  # ref. https://www.vultr.com/api/#firewall_group_list
+  CheckDependency curl
+  VultrSetCredentials
+  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/firewall/group_list")
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+##
+# network
+##
 VultrNetworkCreate() {
   # ref. https://www.vultr.com/api/#network_create
   CheckDependency curl
@@ -124,6 +157,17 @@ VultrNetworkCreateWithOptional() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+VultrNetworkList() {
+  # ref. https://www.vultr.com/api/#network_network_list
+  CheckDependency curl
+  VultrSetCredentials
+  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/network/list")
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+##
+# os
+##
 VultrOSList() {
   # ref. https://www.vultr.com/api/#os_os_list
   CheckDependency curl
@@ -132,6 +176,9 @@ VultrOSList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+##
+# plans
+##
 VultrPlansList() {
   # ref. https://www.vultr.com/api/#plans_plan_list
   CheckDependency curl
@@ -140,6 +187,9 @@ VultrPlansList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+##
+# regions
+##
 VultrRegionsList() {
   # ref. https://www.vultr.com/api/#regions_region_list
   CheckDependency curl
@@ -148,14 +198,9 @@ VultrRegionsList() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
-VultrServerList() {
-  # ref. https://www.vultr.com/api/#server_server_list
-  CheckDependency curl
-  VultrSetCredentials
-  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/server/list")
-  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
-}
-
+##
+# server
+##
 VultrServerCreate() {
   # ref. https://www.vultr.com/api/#server_create
   CheckDependency curl
@@ -190,9 +235,40 @@ VultrServerCreateWithOptional() {
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
 
+VultrServerList() {
+  # ref. https://www.vultr.com/api/#server_server_list
+  CheckDependency curl
+  VultrSetCredentials
+  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/server/list")
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+##
+# startupscript
+##
+VultrStartupscriptList() {
+  # ref. https://www.vultr.com/api/#startupscript_startupscript_list
+  CheckDependency curl
+  VultrSetCredentials
+  vultrAPIResponse=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/startupscript/list")
+  echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
+}
+
+
+##
+# tools
+##
 VultrToolsGetOSUbuntu1804() { CheckDependency jq; VultrOSList | jq '.[] | select( .name == "Ubuntu 18.04 x64" )'; }
 VultrToolsGetPlanRAM1024() { CheckDependency jq; VultrPlansList | jq '.[] | select( .ram == "1024" )'; }
 VultrToolsGetDCTokyo() { CheckDependency jq; VultrRegionsList | jq '.[] | select( .name == "Tokyo" )'; }
+
+VultrToolsServerCreateTokyoRAM1024Ubuntu1804() {
+  VultrServerCreateWithOptional 25 201 270 yes
+}
+
+VultrToolsServerCreateK8sCluster() {
+  VultrServerCreateWithOptional 25 201 270 yes
+}
 
 vultrMain() {  ## main start DO NOT REMOVE ##
   subCommand="$1"
@@ -244,6 +320,14 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         info   ) VultrAccountInfo "$@" ;;
         *      ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;
+    firewall)
+      case "${subSubCommand}" in
+        subcmds     ) eval "${getSubSubCmds}" ;;
+        group-create) VultrFirewallGroupCreate "$@" ;;
+        group-delete) VultrFirewallGroupDelete "$@" ;;
+        group-list  ) VultrFirewallGroupList "$@" ;;
+        *           ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
     network)
       case "${subSubCommand}" in
         subcmds             ) eval "${getSubSubCmds}" ;;
@@ -278,13 +362,20 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         list                ) VultrServerList "$@" ;;
         *                   ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
       esac ;;
+    startupscript)
+      case "${subSubCommand}" in
+        subcmds) eval "${getSubSubCmds}" ;;
+        list   ) VultrStartupscriptList "$@" ;;
+        *      ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1 ;;
+      esac ;;
     tools)
       case "${subSubCommand}" in
         subcmds                               ) eval "${getSubSubCmds}" ;;
         get-os-ubuntu1804                     ) VultrToolsGetOSUbuntu1804 "$@" ;;
         get-plan-ram1024                      ) VultrToolsGetPlanRAM1024 "$@" ;;
         get-dc-tokyo                          ) VultrToolsGetDCTokyo "$@" ;;
-        server-create-tokyo-ram1024-ubuntu1804) VultrServerCreateWithOptional 25 201 270 yes ;;
+        server-create-tokyo-ram1024-ubuntu1804) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
+        server-create-k8s-cluster             ) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
         *                                     ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
       esac ;;
     version)
