@@ -12,7 +12,7 @@ if ! { echo "$-" | grep -q i; }; then
 set -e -o pipefail
 
 # Global variables
-VULTR_VERSION='0.0.2'
+VULTR_VERSION='0.0.3'
 VULTR_PROGRAM_NAME="$(basename -- "$0")"
 
 VultrPrintStderr() {
@@ -110,9 +110,9 @@ VultrNetworkCreateWithOptional() {
   # ref. https://www.vultr.com/api/#network_create
   CheckDependency curl
   vultrNetworkDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location for the network." "See:" "  $ vultr regions list")"}"
-  vultrNetworkDescription="${2:?"$(printf '\n%s' "Set \$2: description string Description of network.")"}"
-  vultrNetworkV4Subnet="${3:?"$(printf '\n%s' "Set \$3: v4_subnet string IPv4 network to be used when attaching servers to this network.")"}"
-  vultrNetworkV4SubnetMask="${4:?"$(printf '\n%s' "Set \$4: v4_subnet_mask int Network mask corresponding with the v4_subnet.")"}"
+  vultrNetworkDescription="${2:?"$(printf '\n%s' "Set \$2: description string (optional) Description of network.")"}"
+  vultrNetworkV4Subnet="${3:?"$(printf '\n%s' "Set \$3: v4_subnet string (optional) IPv4 network to be used when attaching servers to this network.")"}"
+  vultrNetworkV4SubnetMask="${4:?"$(printf '\n%s' "Set \$4: v4_subnet_mask int (optional) Network mask corresponding with the v4_subnet.")"}"
   VultrSetCredentials
   vultrAPIResponse=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/network/create" \
@@ -178,12 +178,14 @@ VultrServerCreateWithOptional() {
   vultrServerDCID="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
   vultrServerVPSPLANID="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultrServerOSID="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
+  vultrServerEnablePrivateNetwork="${4:?"$(printf '\n%s' "Set \$4: enable_private_network string (optional) 'yes' or 'no'. If yes, private networking support will be added to the new server.")"}"
   VultrSetCredentials
   vultrAPIResponse=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/create" \
       -d "DCID=${vultrServerDCID}" \
       -d "VPSPLANID=${vultrServerVPSPLANID}" \
-      -d "OSID=${vultrServerOSID}"
+      -d "OSID=${vultrServerOSID}" \
+      -d "enable_private_network=${vultrServerEnablePrivateNetwork}"
   )
   echo "${vultrAPIResponse}" | VultrJSON 2>/dev/null || VultrPrintStderr "${vultrAPIResponse}"
 }
@@ -282,7 +284,7 @@ vultrMain() {  ## main start DO NOT REMOVE ##
         get-os-ubuntu1804                     ) VultrToolsGetOSUbuntu1804 "$@" ;;
         get-plan-ram1024                      ) VultrToolsGetPlanRAM1024 "$@" ;;
         get-dc-tokyo                          ) VultrToolsGetDCTokyo "$@" ;;
-        server-create-tokyo-ram1024-ubuntu1804) VultrServerCreate 25 201 270 ;;
+        server-create-tokyo-ram1024-ubuntu1804) VultrServerCreateWithOptional 25 201 270 yes ;;
         *                                     ) VultrPrintStderr "allowed value: $(bash "$0" "${subCommand}" subcmds)"; return 1;;
       esac ;;
     version)
