@@ -412,15 +412,7 @@ VultrToolsServerCreateK8sClusterSingleMaster() {
     VultrSshkeyCreate "${vultr_tag_k8s}" "$(sed 's/&/%26/g; s/+/%2B/g' "${vultr_sshkey_k8s}.pub")"
   fi
   vultr_sshkeyid_k8s=$(VultrSshkeyList | jq -r '.[] | select( .name == "'"${vultr_tag_k8s}"'" ) | .SSHKEYID')
-  #if ! VultrStartupscriptList | jq '.[] | select( .name == "'"${vultr_label_k8s_master}"'" )' | grep -q SCRIPTID; then
-  if ! VultrStartupscriptList | grep -Eq 'SCRIPTID":"[0-9]*",.*"name":"'"${vultr_label_k8s_master}"'"'; then
-    #VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; })" boot
-    #VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; } | sed 's/&/%26/g; s/+/%2B/g')" boot
-    VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ printf '%s\n%s\n%s\n' '#!/bin/bash' 'apt-get update; apt-get install -y curl' 'curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh | bash'; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; } | sed 's/&/%26/g; s/+/%2B/g')" boot
-  fi
-  #vultr_scriptid_k8s=$(VultrStartupscriptList | jq -r '.[] | select( .name == "'"${vultr_label_k8s_master}"'" ) | .SCRIPTID')
-  vultr_scriptid_k8s=$(VultrStartupscriptList | grep -E '"SCRIPTID":"[0-9]*",.*"name":"'"${vultr_label_k8s_master}"'"' | sed 's/.*"SCRIPTID":"\([0-9]*\)".*/\1/g')
-  VultrServerCreateWithOptional 25 201 270 "${vultr_scriptid_k8s}" yes "${vultr_sshkeyid_k8s}" "${vultr_label_k8s_master}" "${vultr_tag_k8s}"
+  VultrServerCreateWithOptional 25 201 270 "null" yes "${vultr_sshkeyid_k8s}" "${vultr_label_k8s_master}" "${vultr_tag_k8s}"
   : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
   : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
   : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
@@ -430,10 +422,18 @@ VultrToolsServerCreateK8sClusterSingleMaster() {
   vultr_api_response="$(VultrServerList | jq .)"
   SSH_USER=root
   SSH_HOST=$(echo "${vultr_api_response}" | jq -r '.[] | select( .label == "'"${vultr_label_k8s_master}"'" ) | .main_ip')
-  while ! ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${SSH_USER}" "${SSH_HOST}" bash -c 'date; uname -n; id'; do
+  # make script
+  k8s_master_setup_script=~/tmp/setup-k8s-master.sh
+  mkdir -p "$(dirname -- ${k8s_master_setup_script})"
+  {
+    curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh
+    echo "echo $(cat ~/.ssh/id_rsa.pub) > ~/.ssh/authorized_keys" 
+  } | tee -a "${k8s_master_setup_script}" 1>/dev/null
+while ! scp -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o User="${SSH_USER}" "${k8s_master_setup_script}" "${SSH_HOST}":~/"$(basename -- "${k8s_master_setup_script}")" ; do
     sleep 1
   done
-  ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${SSH_USER}" "${SSH_HOST}"
+  ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o User="${SSH_USER}" "${SSH_HOST}" bash -c "bash ~/$(basename -- "${k8s_master_setup_script}") &"
+  echo ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o User="${SSH_USER}" "${SSH_HOST}"
 }
 
 
