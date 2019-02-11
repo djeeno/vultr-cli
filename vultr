@@ -258,10 +258,11 @@ VultrServerCreateWithOptional() {
   vultr_server_dcid="${1:?"$(printf '\n%s\n%s\n%s' "Set \$1: DCID integer Location to create this virtual machine in." "See:" "  $ vultr regions list")"}"
   vultr_server_vpsplanid="${2:?"$(printf '\n%s\n%s\n%s' "Set \$2: VPSPLANID integer Plan to use when creating this virtual machine." "See:" "  $ vultr plans list")"}"
   vultr_server_osid="${3:?"$(printf '\n%s\n%s\n%s' "Set \$3: OSID integer Operating system to use." "See:" "  $ vultr os list")"}"
-  vultr_server_enable_private_network="${4:?"$(printf '\n%s' "Set \$4: enable_private_network string (optional) 'yes' or 'no'. If yes, private networking support will be added to the new server.")"}"
-  vultr_server_base64_encoded_userdata="${5:?"$(printf '\n%s' "Set \$5: userdata string (optional) Base64 encoded user-data")"}"
-  vultr_server_label="${6:?"$(printf '\n%s' "Set \$6: label string (optional) This is a text label that will be shown in the control panel")"}"
-  vultr_server_tag="${7:?"$(printf '\n%s' "Set \$7: tag string (optional) The tag to assign to this server.")"}"
+  vultr_server_scriptid="${4:?"$(printf '\n%s\n%s\n%s' "Set \$4: SCRIPTID integer (optional) If you've not selected a 'custom' operating system, this can be the SCRIPTID of a startup script to execute on boot." "See:" "  $ vultr startupscript list")"}"
+  vultr_server_enable_private_network="${5:?"$(printf '\n%s' "Set \$5: enable_private_network string (optional) 'yes' or 'no'. If yes, private networking support will be added to the new server.")"}"
+  vultr_server_sshkeyid="${6:?"$(printf '\n%s\n%s\n%s' "Set \$6: SSHKEYID string (optional) List of SSH keys to apply to this server on install (only valid for Linux/FreeBSD). Separate keys with commas" "See:" "  $ vultr sshkey list")"}"
+  vultr_server_label="${7:?"$(printf '\n%s' "Set \$7: label string (optional) This is a text label that will be shown in the control panel")"}"
+  vultr_server_tag="${8:?"$(printf '\n%s' "Set \$8: tag string (optional) The tag to assign to this server.")"}"
   VultrSetCredentials
   vultr_api_response=$(
     curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/server/create" \
@@ -269,7 +270,8 @@ VultrServerCreateWithOptional() {
       -d "VPSPLANID=${vultr_server_vpsplanid}" \
       -d "OSID=${vultr_server_osid}" \
       -d "enable_private_network=${vultr_server_enable_private_network}" \
-      -d "userdata=${vultr_server_base64_encoded_userdata}" \
+      -d "SCRIPTID=${vultr_server_scriptid}" \
+      -d "SSHKEYID=${vultr_server_sshkeyid}" \
       -d "label=${vultr_server_label}" \
       -d "tag=${vultr_server_tag}"
   )
@@ -356,12 +358,29 @@ VultrSshkeyUpdate() {
 ##
 # startupscript
 ##
+VultrStartupscriptCreate() {
+  # ref. https://www.vultr.com/api/#startupscript_create
+  CheckDependency curl
+  vultr_startupscript_name="${1:?"$(printf '\n%s' "Set \$1: name string Name of the newly created startup script.")"}"
+  vultr_startupscript_content="${2:?"$(printf '\n%s' "Set \$2: script string Startup script contents.")"}"
+  vultr_startupscript_type="${3:?"$(printf '\n%s' "Set \$3: type string boot|pxe (optional) Type of startup script. Default is 'boot'.")"}"
+  VultrSetCredentials
+  vultr_api_response=$(
+    curl -sS -H "API-Key: ${VultrAPIKey}" -X POST "https://api.vultr.com/v1/startupscript/create" \
+      -d "name=${vultr_startupscript_name}" \
+      -d "script=${vultr_startupscript_content}" \
+      -d "type=${vultr_startupscript_type}"
+  )
+  echo "${vultr_api_response}" | VultrJSON 2>/dev/null || PrintStderr "${vultr_api_response}"
+}
+
 VultrStartupscriptList() {
   # ref. https://www.vultr.com/api/#startupscript_startupscript_list
   CheckDependency curl
   VultrSetCredentials
   vultr_api_response=$(curl -sS -H "API-Key: ${VultrAPIKey}" -X GET "https://api.vultr.com/v1/startupscript/list")
-  echo "${vultr_api_response}" | VultrJSON 2>/dev/null || PrintStderr "${vultr_api_response}"
+  #echo "${vultr_api_response}" | VultrJSON 2>/dev/null || PrintStderr "${vultr_api_response}"
+  echo "${vultr_api_response}"
 }
 
 
@@ -374,15 +393,47 @@ VultrToolsGetPlanRAM1024() { CheckDependency jq; VultrPlansList | jq '.[] | sele
 VultrToolsGetDCTokyo() { CheckDependency jq; VultrRegionsList | jq '.[] | select( .name == "Tokyo" )'; }
 
 VultrToolsServerCreateTokyoRAM1024Ubuntu1804() {
-  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK "tmp$(TZ=UTC date +%Y%m%dT%H%M%SZ)" tmp
+  VultrServerCreateWithOptional 25 201 270 " " yes " " "tmp$(TZ=UTC date +%Y%m%dT%H%M%SZ)" tmp
 }
 
 VultrToolsServerCreateK8sClusterSingleMaster() {
-  VultrServerCreateWithOptional 25 201 270 yes "$(curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh | VultrBase64Encode)" k8s001master001 k8s001
-  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker001 k8s001
-  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker002 k8s001
-  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker003 k8s001
-  VultrServerList | jq .
+  set -x
+  CheckDependency jq
+  vultr_label_k8s_master=k8s001master001
+  vultr_label_k8s_worker=k8s001worker001
+  vultr_tag_k8s=k8s001
+  vultr_sshkey_k8s="${HOME}/.ssh/id_rsa"
+  if [ ! -f "${vultr_sshkey_k8s}" ] || [ ! -f "${vultr_sshkey_k8s}.pub" ]; then
+    PrintStderr "You need \"${vultr_sshkey_k8s}\" and \"${vultr_sshkey_k8s}.pub\""
+    exit 1
+  fi
+  if ! VultrSshkeyList | jq '.[] | select( .name == "'"${vultr_tag_k8s}"'" )' | grep -q SSHKEYID; then
+    #VultrSshkeyCreate "${vultr_tag_k8s}" "$(cat "${vultr_sshkey_k8s}.pub")"
+    VultrSshkeyCreate "${vultr_tag_k8s}" "$(sed 's/&/%26/g; s/+/%2B/g' "${vultr_sshkey_k8s}.pub")"
+  fi
+  vultr_sshkeyid_k8s=$(VultrSshkeyList | jq -r '.[] | select( .name == "'"${vultr_tag_k8s}"'" ) | .SSHKEYID')
+  #if ! VultrStartupscriptList | jq '.[] | select( .name == "'"${vultr_label_k8s_master}"'" )' | grep -q SCRIPTID; then
+  if ! VultrStartupscriptList | grep -Eq 'SCRIPTID":"[0-9]*",.*"name":"'"${vultr_label_k8s_master}"'"'; then
+    #VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; })" boot
+    #VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; } | sed 's/&/%26/g; s/+/%2B/g')" boot
+    VultrStartupscriptCreate "${vultr_label_k8s_master}" "$({ printf '%s\n%s\n%s\n' '#!/bin/bash' 'apt-get update; apt-get install -y curl' 'curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh | bash'; echo "echo $(cat "${vultr_sshkey_k8s}.pub") > ~/.ssh/authorized_keys"; } | sed 's/&/%26/g; s/+/%2B/g')" boot
+  fi
+  #vultr_scriptid_k8s=$(VultrStartupscriptList | jq -r '.[] | select( .name == "'"${vultr_label_k8s_master}"'" ) | .SCRIPTID')
+  vultr_scriptid_k8s=$(VultrStartupscriptList | grep -E '"SCRIPTID":"[0-9]*",.*"name":"'"${vultr_label_k8s_master}"'"' | sed 's/.*"SCRIPTID":"\([0-9]*\)".*/\1/g')
+  VultrServerCreateWithOptional 25 201 270 "${vultr_scriptid_k8s}" yes "${vultr_sshkeyid_k8s}" "${vultr_label_k8s_master}" "${vultr_tag_k8s}"
+  : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
+  : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
+  : VultrServerCreateWithOptional 25 201 270 IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK yes "${vultr_label_k8s_worker}" "${vultr_tag_k8s}"
+  while { VultrServerList | jq -r '.[] | select( .label == "'"${vultr_label_k8s_master}"'" ) | .main_ip' || true; } | grep -Eq "0\.0\.0\.0|^$" ; do
+    sleep 1
+  done
+  vultr_api_response="$(VultrServerList | jq .)"
+  SSH_USER=root
+  SSH_HOST=$(echo "${vultr_api_response}" | jq -r '.[] | select( .label == "'"${vultr_label_k8s_master}"'" ) | .main_ip')
+  while ! ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${SSH_USER}" "${SSH_HOST}" bash -c 'date; uname -n; id'; do
+    sleep 1
+  done
+  ssh -o IdentityFile="${vultr_sshkey_k8s}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l "${SSH_USER}" "${SSH_HOST}"
 }
 
 
@@ -495,6 +546,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
     startupscript)
       case "${sub2_command}" in
         subcmds) eval "${get_sub2_cmds}" ;;
+        create ) VultrStartupscriptCreate "$@" ;;
         list   ) VultrStartupscriptList "$@" ;;
         *      ) PrintStderr "allowed value: $(bash "$0" "${sub_command}" subcmds)"; return 1 ;;
       esac ;;
