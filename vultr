@@ -26,14 +26,16 @@ PrintStderr() {
   echo "$*" 1>&2
 }
 
-CheckDependency() { (
+CheckDependency() {
+  code=0
   for cmd in "$@"; do
-    if ! command -v -- "${cmd}" >/dev/null; then
+    if ! command -v -- "${cmd}" 1>/dev/null; then
       PrintStderr "\"${cmd}\" not found in \$PATH"
-      exit 1
+      code=$((code+1))
     fi
   done
-)}
+  [ "${code}" -eq 0 ] || exit 1
+}
 
 VULTR_CREDENTIALS_FILE="$HOME/.vultr/credentials"
 
@@ -67,6 +69,18 @@ VultrSetCredentials() {
     PrintStderr "  $ vultr configure"
     exit 1
   fi
+}
+
+VultrBase64Encode() {
+CheckDependency base64 openssl
+if command -v base64 1>/dev/null; then
+  base64 < /dev/stdin
+elif command -v openssl 1>/dev/null; then
+  openssl base64 < /dev/stdin
+else
+  echo "You need \"base64\" or \"openssl\""
+  exit 1
+fi
 }
 
 VultrJSON() {
@@ -364,10 +378,11 @@ VultrToolsServerCreateTokyoRAM1024Ubuntu1804() {
 }
 
 VultrToolsServerCreateK8sClusterSingleMaster() {
-  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001master001 k8s001
-  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker001 k8s001
-  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker002 k8s001
-  VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker003 k8s001
+  VultrServerCreateWithOptional 25 201 270 yes "$(curl -LsS https://djeeno.gitlab.io/userdata/k8s-master.sh | VultrBase64Encode)" k8s001master001 k8s001
+  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker001 k8s001
+  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker002 k8s001
+  #VultrServerCreateWithOptional 25 201 270 yes IyEvYmluL2Jhc2gKYXB0LWdldCB1cGRhdGUK k8s001worker003 k8s001
+  VultrServerList | jq .
 }
 
 
@@ -485,13 +500,13 @@ VultrMain() {  ## main start DO NOT REMOVE ##
       esac ;;
     tools)
       case "${sub2_command}" in
-        subcmds                               ) eval "${get_sub2_cmds}" ;;
-        get-os-ubuntu1804                     ) VultrToolsGetOSUbuntu1804 "$@" ;;
-        get-plan-ram1024                      ) VultrToolsGetPlanRAM1024 "$@" ;;
-        get-dc-tokyo                          ) VultrToolsGetDCTokyo "$@" ;;
-        server-create-tokyo-ram1024-ubuntu1804) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
-        server-create-k8s-cluster             ) VultrToolsServerCreateK8sCluster "$@" ;;
-        *                                     ) PrintStderr "allowed value: $(bash "$0" "${sub_command}" subcmds)"; return 1;;
+        subcmds                                ) eval "${get_sub2_cmds}" ;;
+        get-os-ubuntu1804                      ) VultrToolsGetOSUbuntu1804 "$@" ;;
+        get-plan-ram1024                       ) VultrToolsGetPlanRAM1024 "$@" ;;
+        get-dc-tokyo                           ) VultrToolsGetDCTokyo "$@" ;;
+        server-create-tokyo-ram1024-ubuntu1804 ) VultrToolsServerCreateTokyoRAM1024Ubuntu1804 "$@" ;;
+        server-create-k8s-cluster-single-master) VultrToolsServerCreateK8sClusterSingleMaster "$@" ;;
+        *                                      ) PrintStderr "allowed value: $(bash "$0" "${sub_command}" subcmds)"; return 1;;
       esac ;;
     version)
       case "${sub2_command}" in
