@@ -465,7 +465,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
   get_sub_cmds='''
     echo "${vultr_main_method_content}" \
       | grep -Eo "^ {4}[^ ]+ *)" \
-      | grep -Ev "^ {4}(subcmds|\*|completion)" \
+      | grep -Ev "^ {4}(subcmds|\*|complete)" \
       | tr -d "\n" \
       | sed "s/ *//g; s/)/ /g; s/|/ /g"
   '''
@@ -482,7 +482,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
   case "${sub_command}" in
     subcmds)
       eval "${get_sub_cmds}" ;;
-    completion)
+    complete)
       case "${sub2_command}" in
         subcmds) true ;;
         *      ) echo ". $(cd "$(dirname "$0")"; pwd)/$(basename -- "$0")" ;;
