@@ -55,7 +55,7 @@ VultrConfigure() {
     PrintStderr "Vultr API key not set"
     exit 1
   fi
-  echo "VultrAPIKey=${VultrAPIKey}" | tee "${VULTR_CREDENTIALS_FILE}" 1>/dev/null
+  echo "VultrAPIKey=${VultrAPIKey}" > "${VULTR_CREDENTIALS_FILE}"
   chown -R "$(id -u)":"$(id -g)" "$(dirname -- "${VULTR_CREDENTIALS_FILE}")"
   chmod -R go-rwx "$(dirname -- "${VULTR_CREDENTIALS_FILE}")"
 }
