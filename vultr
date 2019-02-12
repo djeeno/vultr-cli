@@ -467,7 +467,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
       | grep -Eo "^ {4}[^ ]+ *)" \
       | grep -Ev "^ {4}(subcmds|\*|completion)" \
       | tr -d "\n" \
-      | sed "s/ *//g; s/)/ /g"
+      | sed "s/ *//g; s/)/ /g; s/|/ /g"
   '''
 
   # shellcheck disable=1004,SC2016
@@ -476,7 +476,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
       | grep -Eo "^( {4}| {8})[^ ]+ *)" \
       | grep -Ev "^ {4}(subcmds|\*)|^ {8}subcmds" \
       | tr -d "\n" \
-      | sed "s/.* \(${sub_command} *)[^\*]*\).*/\1/g; s/^${sub_command} *)//g; s/ *//g; s/)/ /g"
+      | sed "s/.* \(${sub_command} *)[^\*]*\).*/\1/g; s/^${sub_command} *)//g; s/ *//g; s/)/ /g; s/|/ /g"
   '''
 
   case "${sub_command}" in
@@ -490,7 +490,7 @@ VultrMain() {  ## main start DO NOT REMOVE ##
     configure)
       case "${sub2_command}" in
         subcmds) true ;;
-        *      ) VultrConfigure ;;
+        *      ) VultrConfigure "$@" ;;
       esac ;;
     account)
       case "${sub2_command}" in
