@@ -1,7 +1,8 @@
 SHELL := /bin/bash
 GIT_ROOT_DIR := $(shell echo "`pwd`/`git rev-parse --show-cdup`" | sed 's@/$$@@')
+BIN_NAME=vultr
 
-.PHONY: help init release release-force test
+.PHONY: help merge release release-force test
 
 help:  ## Print docs
 	@# init
@@ -27,5 +28,5 @@ release: test  ## Add tag and push tag for release
 	@./.tools/release.sh
 
 release-force: test  ## Force push release tag 
-	@git tag -d `${GIT_ROOT_DIR}/vultr version | sed s/^[^[:blank:]]*[[:blank:]]//` && git push origin :`vultr version | sed s/^[^[:blank:]]*[[:blank:]]//`
+	@git tag -d `${GIT_ROOT_DIR}/${BIN_NAME} version | sed s/^[^[:blank:]]*[[:blank:]]//` && git push origin :`${BIN_NAME} version | sed s/^[^[:blank:]]*[[:blank:]]//`
 	@./.tools/release.sh
