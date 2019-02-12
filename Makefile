@@ -27,5 +27,5 @@ release: test  ## Add tag and push tag for release
 	@./.tools/release.sh
 
 release-force: test  ## Force push release tag 
-	@git tag -d `${GIT_ROOT_DIR}/vultr version | sed s/^[^[:blank:]]*[[:blank:]]//` && git push origin :`laws version | sed s/^[^[:blank:]]*[[:blank:]]//`
+	@git tag -d `${GIT_ROOT_DIR}/vultr version | sed s/^[^[:blank:]]*[[:blank:]]//` && git push origin :`vultr version | sed s/^[^[:blank:]]*[[:blank:]]//`
 	@./.tools/release.sh
