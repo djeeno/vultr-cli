@@ -18,7 +18,7 @@ $ sudo mv /tmp/vultr /usr/local/bin/vultr
 ### Tab completion
 
 ```console
-$ eval "$(vultr complete)"
+$ eval "$(vultr completion)"
 
 $ vultr  # <tab>
 account        configure      firewall       network        os             plans          regions        server         startupscript  tools          version
